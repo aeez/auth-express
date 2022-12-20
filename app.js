@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema({
   email: String,
   password: String,
   googleId: String,
+  secret: String,
 });
 
 // menambahkan plugin passport local mongoose
@@ -153,13 +154,45 @@ app
     );
   });
 
+// secrets route
 app.route("/secrets").get((req, res) => {
-  if (req.isAuthenticated()) {
-    res.render("secrets");
-  } else {
-    res.redirect("/login");
-  }
+  User.find({ "secret": { $ne: null } }, (err, results) => {
+    if (err) {
+      console.log(err);
+    } else {
+      if (results) {
+        res.render("secrets", { usersWithSecrets: results });
+      }
+    }
+  });
 });
+
+// submit secret route
+app
+  .route("/submit")
+  .get((req, res) => {
+    if (req.isAuthenticated()) {
+      res.render("submit");
+    } else {
+      res.redirect("/login");
+    }
+  })
+  .post((req, res) => {
+    const submittedSecret = req.body.secret;
+
+    User.findById(req.user.id, (err, result) => {
+      if (err) {
+        console.log(err);
+      } else {
+        if (result) {
+          result.secret = submittedSecret;
+          result.save(() => {
+            res.redirect("/secrets");
+          });
+        }
+      }
+    });
+  });
 
 app.listen(port, () => {
   console.log(`listening on port ${port}`);
